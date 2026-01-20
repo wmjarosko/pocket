@@ -7,8 +7,31 @@
 #>
 
 param (
-    [string]$TargetNetwork = "192.168.1.0/24" # CHANGE THIS to your network subnet
+    [string]$TargetNetwork
 )
+
+if ([string]::IsNullOrWhiteSpace($TargetNetwork)) {
+    Write-Host "No target network specified. Attempting to detect local subnet..." -ForegroundColor Cyan
+    try {
+        # Get active IPv4 address (excluding loopback)
+        $interface = Get-NetIPAddress -AddressFamily IPv4 -ConnectionState Connected -ErrorAction Stop |
+            Where-Object { $_.InterfaceAlias -notlike "*Loopback*" -and $_.IPAddress -notlike "169.254.*" } |
+            Sort-Object InterfaceMetric |
+            Select-Object -First 1
+
+        if ($interface) {
+            $TargetNetwork = "$($interface.IPAddress)/$($interface.PrefixLength)"
+            Write-Host "Detected active network: $TargetNetwork" -ForegroundColor Green
+        } else {
+            Write-Error "Could not automatically detect active network. Please specify -TargetNetwork."
+            exit 1
+        }
+    }
+    catch {
+        Write-Error "Network detection failed. Please specify -TargetNetwork manually."
+        exit 1
+    }
+}
 
 # --- PART 1: Local Endpoint Check ---
 Write-Host "--- Checking Local System for Proxyware Processes ---" -ForegroundColor Cyan
