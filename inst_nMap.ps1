@@ -2,4 +2,4 @@
 winget install Insecure.Nmap
 
 # Alternatively, if you use Chocolatey:
-# choco install nmap
+choco install nmap
