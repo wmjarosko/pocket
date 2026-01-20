@@ -1,7 +1,29 @@
 #!/bin/bash
 
 # Configuration
-TARGET_NET="192.168.1.0/24" # CHANGE THIS to your network subnet
+# Automatic network detection
+if command -v ip &> /dev/null; then
+    # Try to find default interface
+    DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}' | head -n 1)
+
+    if [ -z "$DEFAULT_IFACE" ]; then
+        # Fallback to first non-loopback interface
+        TARGET_NET=$(ip -o -f inet addr show | awk '$2 !~ /^lo/ {print $4}' | head -n 1)
+    else
+        TARGET_NET=$(ip -o -f inet addr show "$DEFAULT_IFACE" | awk '{print $4}' | head -n 1)
+    fi
+else
+    echo "[!] 'ip' command not found. Cannot automatically detect network."
+fi
+
+# Fallback if detection failed
+if [ -z "$TARGET_NET" ]; then
+    echo "[!] Could not detect network subnet. Defaulting to 192.168.1.0/24"
+    TARGET_NET="192.168.1.0/24"
+else
+    echo "[+] Detected network: $TARGET_NET"
+fi
+
 PROXY_PORTS="1080,3128,8000,8080,8118,8123,8888,9050,9051,4444"
 KNOWN_APPS="honeygain|packetstream|iproyal|pawns|earnapp|peer2profit"
 
